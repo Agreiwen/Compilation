@@ -1,0 +1,219 @@
+package plic.analyse;
+
+import java_cup.runtime.Symbol;
+import plic.Plic;
+import plic.arbre.affectation.Affectation;
+import plic.arbre.classe.Classe;
+import plic.arbre.declaration.Declaration;
+import plic.arbre.declaration.DeclarationChamps;
+import plic.arbre.declaration.DeclarationConstantes;
+import plic.arbre.declaration.ListeDeclaration;
+import plic.arbre.expression.Expression;
+import plic.arbre.expression.binaire.Different;
+import plic.arbre.expression.binaire.Division;
+import plic.arbre.expression.binaire.Egale;
+import plic.arbre.expression.binaire.Inferieur;
+import plic.arbre.expression.binaire.Multiplication;
+import plic.arbre.expression.binaire.Somme;
+import plic.arbre.expression.binaire.Soustraction;
+import plic.arbre.expression.binaire.Superieur;
+import plic.arbre.expression.unaire.Opposer;
+import plic.arbre.expression.unaire.Unaire;
+import plic.arbre.identifiant.ListeIdentifiant;
+import plic.arbre.instruction.ecrire.EcrireChaine;
+import plic.arbre.instruction.ecrire.EcrireExpression;
+import plic.arbre.instruction.ecrire.Lire;
+import plic.arbreAbstrait.ArbreAbstrait;
+
+action code {: 
+			:}; 
+
+parser code {:
+
+	public void syntax_error(Symbol cur_token){
+		
+	}
+
+    public void report_error(String message, Object info) {
+        
+    }
+
+    public void report_fatal_error(String message, Object info) {
+    	
+    	String mess = "";
+        if (info instanceof java_cup.runtime.Symbol) {
+            java_cup.runtime.Symbol s = ((java_cup.runtime.Symbol) info);
+            if (s.left >= 0) {                
+                mess = "ERREUR SYNTAXIQUE : ligne "+(s.left+1)+" : Mauvais usage "+Plic.getTokensString()+"\nusage(s) possible(s) : \n"+Plic.getAllUsageWithTokens();
+            }
+        }
+		System.out.println(mess);
+        System.exit(1);
+    }
+:};
+
+terminal String cste_ent, cste_chaine, parenthese_ouvert, parenthese_fermer, plus, moins, fois, diviser, inf, sup, test_egale;
+terminal String test_different, bool, classe, fin, pointvirgule, idf, statut, type, virgule, ecrire, lire, egale;
+
+non terminal ArbreAbstrait SYSTEME;
+non terminal Classe CLASSE;
+non terminal ListeDeclaration LDECL;
+non terminal Declaration DECLARATION;
+non terminal DeclarationChamps DECL_CHAMP;
+non terminal DeclarationConstantes DECL_CONST;
+non terminal ListeIdentifiant LIDF;
+non terminal Affectation AFFECT;
+non terminal Expression EXP;
+non terminal Lire INSTLIRE;
+non terminal DeclarationConstantes INSTECRIRE;
+
+precedence left bool;
+precedence left inf, sup, test_egale, test_different;
+precedence left plus, moins;
+precedence left fois, diviser;
+
+start with SYSTEME;
+
+SYSTEME	::= CLASSE:c
+	{: 
+		Plic.derniereGrammaire = "declaration de classe";
+		RESULT = new ArbreAbstrait(c); 
+	:};
+	
+CLASSE ::= classe idf:i LDECL:l fin
+	{: 
+		RESULT = new Classe(l,i); 
+	:}
+	| classe idf:i fin
+	{: 
+		RESULT = new Classe(null,i); 
+	:};
+
+LDECL ::= LDECL:l DECLARATION:d
+	{: 	
+		Plic.clearTokens();
+		Plic.derniereGrammaire = "Probleme de declaration";
+		l.ajouterDeclaration(d);
+		RESULT = l; 
+	:}
+	| DECLARATION:d
+	{: 	
+		Plic.clearTokens();
+		Plic.derniereGrammaire = "Probleme de declaration";
+		ListeDeclaration l = new ListeDeclaration();
+		l.ajouterDeclaration(d);
+		RESULT = l; 
+	:};
+	
+DECLARATION ::= DECL_CHAMP:d pointvirgule
+	{: 
+		Plic.derniereGrammaire = "Declaration champ pas bonne";
+		RESULT = d; 
+	:}
+	| DECL_CONST:d pointvirgule
+	{: 
+		Plic.derniereGrammaire = "Declaration constante pas bonne";
+		RESULT = d; 
+	:};
+	
+DECL_CHAMP ::= statut:s type:t LIDF:l 
+	{: 
+		RESULT = new DeclarationChamps(s,t,l); 
+	:};
+
+LIDF ::= LIDF:l virgule idf:i
+	{: 	
+		l.ajouterIdentifiant(i);
+		RESULT = l; 
+	:}
+	| idf:i
+	{: 	
+		ListeIdentifiant l = new ListeIdentifiant();
+		l.ajouterIdentifiant(i);
+		RESULT = l; 
+	:};
+	
+DECL_CONST ::= AFFECT:a
+	{: 
+		RESULT = a; 
+	:}
+	| INSTLIRE:i
+	{: 
+		RESULT = i; 
+	:}
+	| INSTECRIRE:i
+	{: 
+		RESULT = i; 
+	:};
+	
+AFFECT ::=  idf:i egale EXP:e 
+	{: 
+		RESULT = new Affectation(i,e); 
+	:};
+	
+INSTLIRE ::= lire idf:i
+	{: 
+		RESULT = new Lire(i); 
+	:};
+
+INSTECRIRE ::= ecrire EXP:e
+	{: 
+		RESULT = new EcrireExpression(e); 
+	:}
+	| ecrire cste_chaine:c
+	{:
+		RESULT = new EcrireChaine(c); 
+	:};
+
+EXP ::= cste_ent:cste
+	{: 
+		RESULT = new Unaire(Integer.parseInt(""+cste),false); 
+	:}
+	| parenthese_ouvert EXP:e parenthese_fermer
+	{: 
+		RESULT = e; 
+	:}
+	| moins EXP:e
+	{: 
+		RESULT = new Opposer(e); 
+	:}
+	| EXP:e1 plus EXP:e2
+	{: 
+	  	RESULT = new Somme(e1,e2); 
+	:}
+	| EXP:e1 moins EXP:e2
+	{: 
+		RESULT = new Soustraction(e1,e2); 
+	:}
+	| EXP:e1 fois EXP:e2
+	{: 
+		RESULT = new Multiplication(e1,e2); 
+	:}
+	| EXP:e1 diviser EXP:e2
+	{: 
+		RESULT = new Division(e1,e2); 
+	:}
+	| EXP:e1 inf EXP:e2
+	{: 
+		RESULT=new Inferieur(e1,e2); 
+	:}
+	| EXP:e1 sup EXP:e2
+	{: 
+		RESULT=new Superieur(e1,e2); 
+	:}
+	| EXP:e1 test_egale EXP:e2
+	{: 
+		RESULT=new Egale(e1,e2); 
+	:}
+	| EXP:e1 test_different EXP:e2
+	{: 
+		RESULT=new Different(e1,e2); 
+	:}
+	| bool:b
+	{: 
+		RESULT = new Unaire(b,true); 
+	:}
+	| idf:i
+	{:
+		RESULT = new Unaire(i);	
+	:};

@@ -1,0 +1,26 @@
+classe Compilation
+	//Calcul de l'air d'un rectangle de longueur a = 10 et largeur b= 6 #Triangle
+	publique entier a,b;
+	a = 10;
+	b = 6;
+
+	ecrire a*b;
+
+	privee entier resultat;
+	resultat = a*b;
+	lire resultat;
+	
+	publique entier expression;
+	expression = ((((5*2)+4)*4)-6)/2;
+	lire expression;
+	ecrire (expression < 3) + faux;
+	
+	ecrire a;
+	ecrire "je veux voir a";
+	
+	ecrire "\n";
+	
+	//je fais // "un test"
+	
+	ecrire "ecriture d'un mot entre guillemets ""triangle""";
+fin
